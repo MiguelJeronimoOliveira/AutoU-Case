@@ -230,6 +230,29 @@ async def analyze_email(request: EmailRequest) -> EmailResponse:
         )
 
 
+@app.delete("/rag/clear")
+async def clear_rag_history() -> dict:
+    if not rag_retriever:
+        raise HTTPException(
+            status_code=503,
+            detail="RAG Retriever não está disponível"
+        )
+    
+    try:
+        deleted_count = rag_retriever.clear_history()
+        return {
+            "success": True,
+            "message": f"Histórico limpo com sucesso. {deleted_count} documentos removidos.",
+            "deleted_count": deleted_count
+        }
+    except Exception as e:
+        logger.error(f"Erro ao limpar histórico RAG: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Erro ao limpar histórico: {str(e)}"
+        )
+
+
 @app.post("/analyze/upload", response_model=EmailResponse)
 async def analyze_uploaded_email(file: UploadFile = File(...)) -> EmailResponse:
     if not file.filename:

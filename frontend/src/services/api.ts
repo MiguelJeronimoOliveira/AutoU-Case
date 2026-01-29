@@ -25,12 +25,16 @@ export const analyzeFile = async (file: File): Promise<EmailResponse> => {
 
 export const getHistory = async (
   limit: number = 50,
-  category?: 'productive' | 'unproductive'
+  category?: 'productive' | 'unproductive',
+  full: boolean = true
 ): Promise<HistoryResponse> => {
   const params = new URLSearchParams();
   params.append('limit', limit.toString());
   if (category) {
     params.append('category', category);
+  }
+  if (full) {
+    params.append('full', 'true');
   }
 
   const response = await api.get<HistoryResponse>(`/rag/documents?${params.toString()}`);
@@ -39,6 +43,17 @@ export const getHistory = async (
 
 export const healthCheck = async () => {
   const response = await api.get('/health');
+  return response.data;
+};
+
+export interface ClearHistoryResponse {
+  success: boolean;
+  message: string;
+  deleted_count: number;
+}
+
+export const clearHistory = async (): Promise<ClearHistoryResponse> => {
+  const response = await api.delete<ClearHistoryResponse>('/rag/clear');
   return response.data;
 };
 
