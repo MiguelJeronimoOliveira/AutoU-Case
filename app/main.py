@@ -3,14 +3,15 @@
 import logging
 import os
 import tempfile
-from typing import Tuple
+from typing import Optional, Tuple
 
-from fastapi import FastAPI, HTTPException, UploadFile, File
+from fastapi import FastAPI, HTTPException, UploadFile, File, Query
 
 from app.classifier import EmailClassifier
 from app.file_processor import FileProcessor
 from app.models import EmailAnalysis, EmailRequest, EmailResponse
 from app.response_generator import ResponseGenerator
+from app.rag_retriever import RAGRetriever
 
 # Configure logging
 logging.basicConfig(
@@ -30,6 +31,15 @@ app = FastAPI()
 classifier = EmailClassifier()
 response_generator = ResponseGenerator()
 file_processor = FileProcessor()
+
+# Initialize RAG Retriever (if available)
+rag_retriever = None
+try:
+    if response_generator.use_rag and response_generator.rag_retriever:
+        rag_retriever = response_generator.rag_retriever
+        logger.info("RAG Retriever disponível na API")
+except Exception as e:
+    logger.warning(f"RAG Retriever não disponível: {str(e)}")
 
 
 def _validate_file_extension(file_extension: str) -> None:
@@ -69,11 +79,106 @@ def _process_email_analysis(email_content: str) -> EmailAnalysis:
 
 @app.get("/health")
 async def health_check() -> dict:
-    return {
+    health_info = {
         "status": "healthy",
         "classifier": "loaded",
-        "response_generator": "loaded"
+        "response_generator": "loaded",
+        "rag_enabled": response_generator.use_rag if response_generator else False
     }
+    
+    # Adicionar estatísticas RAG se disponível
+    if rag_retriever:
+        try:
+            rag_stats = rag_retriever.get_collection_stats()
+            health_info["rag"] = rag_stats
+        except Exception as e:
+            health_info["rag"] = {"status": "error", "error": str(e)}
+    
+    return health_info
+
+
+@app.get("/rag/stats")
+async def get_rag_stats() -> dict:
+    """Retorna estatísticas da base de conhecimento RAG."""
+    if not rag_retriever:
+        raise HTTPException(
+            status_code=503,
+            detail="RAG Retriever não está disponível"
+        )
+    
+    try:
+        stats = rag_retriever.get_collection_stats()
+        return {
+            "success": True,
+            "stats": stats
+        }
+    except Exception as e:
+        logger.error(f"Erro ao obter estatísticas RAG: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Erro ao obter estatísticas: {str(e)}"
+        )
+
+#
+@app.get("/rag/documents")
+async def get_rag_documents(
+    limit: int = Query(50, ge=1, le=500),
+    category: Optional[str] = Query(None, regex="^(productive|unproductive)$"),
+    full: bool = Query(False)
+) -> dict:
+
+    if not rag_retriever:
+        raise HTTPException(
+            status_code=503,
+            detail="RAG Retriever não está disponível"
+        )
+    
+    try:
+        from app.models import EmailCategory
+        
+        category_enum = None
+        if category:
+            if category not in ["productive", "unproductive"]:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Categoria deve ser 'productive' ou 'unproductive'"
+                )
+            category_enum = EmailCategory.PRODUCTIVE if category == "productive" else EmailCategory.UNPRODUCTIVE
+        
+        documents = rag_retriever.get_all_documents(limit=limit, category=category_enum)
+        
+        # format documents for response
+        formatted_docs = []
+        for doc in documents:
+            metadata = doc["metadata"]
+            formatted_doc = {
+                "id": doc["id"],
+                "category": metadata.get("category", "unknown"),
+                "created_at": metadata.get("created_at", "unknown"),
+                "email_content": metadata.get("email_content", ""),
+                "response": metadata.get("response", "")
+            }
+            
+            if full:
+                formatted_doc["full_document"] = doc["document"]
+            
+            formatted_docs.append(formatted_doc)
+        
+        return {
+            "success": True,
+            "count": len(formatted_docs),
+            "limit": limit,
+            "category_filter": category,
+            "documents": formatted_docs
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Erro ao obter documentos RAG: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Erro ao obter documentos: {str(e)}"
+        )
 
 
 @app.post("/analyze", response_model=EmailResponse)
