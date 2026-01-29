@@ -1,14 +1,15 @@
 import { useEmailHistory } from '../hooks/useEmailHistory';
-import { Loader2, RefreshCw, Filter } from 'lucide-react';
+import { Loader2, RefreshCw, Filter, Eye, X } from 'lucide-react';
 import { useState } from 'react';
 import { clsx } from 'clsx';
-import type { EmailCategory } from '../types';
+import type { EmailCategory, HistoryDocument } from '../types';
 
 export const EmailHistory = () => {
   const [categoryFilter, setCategoryFilter] = useState<
     'productive' | 'unproductive' | undefined
   >(undefined);
   const [limit, setLimit] = useState(50);
+  const [selectedDoc, setSelectedDoc] = useState<HistoryDocument | null>(null);
 
   const {
     data: historyData,
@@ -179,6 +180,13 @@ export const EmailHistory = () => {
                     {formatDate(doc.created_at)}
                   </span>
                 </div>
+                <button
+                  onClick={() => setSelectedDoc(doc)}
+                  className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-primary-600 hover:text-primary-700 hover:bg-primary-50 rounded-lg transition-colors"
+                >
+                  <Eye className="h-4 w-4" />
+                  Ver Completo
+                </button>
               </div>
 
               <div className="space-y-3">
@@ -206,6 +214,74 @@ export const EmailHistory = () => {
           ))}
         </div>
       )}
+
+      {/* Modal para exibir conteúdo completo */}
+      {selectedDoc && (() => {
+        let fullEmailContent = selectedDoc.email_content || '';
+        
+        if (selectedDoc.full_document) {
+          const match = selectedDoc.full_document.match(/^Email:\s*(.+?)(?:\nResposta:|$)/s);
+          if (match && match[1]) {
+            fullEmailContent = match[1].trim();
+          }
+        }
+
+        return (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] flex flex-col">
+              <div className="flex items-center justify-between p-6 border-b border-gray-200">
+                <div className="flex items-center gap-3">
+                  {getCategoryBadge(selectedDoc.category)}
+                  <span className="text-sm text-gray-500">
+                    {formatDate(selectedDoc.created_at)}
+                  </span>
+                </div>
+                <button
+                  onClick={() => setSelectedDoc(null)}
+                  className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+
+              <div className="flex-1 overflow-y-auto p-6 space-y-6">
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-3">
+                    Email Completo:
+                  </h3>
+                  <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                    <p className="text-sm text-gray-900 whitespace-pre-wrap break-words">
+                      {fullEmailContent || 'Sem conteúdo'}
+                    </p>
+                  </div>
+                </div>
+
+                {selectedDoc.response && (
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-3">
+                      Resposta Sugerida Completa:
+                    </h3>
+                    <div className="bg-primary-50 p-4 rounded-lg border border-primary-200">
+                      <p className="text-sm text-gray-800 whitespace-pre-wrap break-words">
+                        {selectedDoc.response}
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="p-6 border-t border-gray-200 flex justify-end">
+                <button
+                  onClick={() => setSelectedDoc(null)}
+                  className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+                >
+                  Fechar
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 };
