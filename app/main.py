@@ -6,6 +6,7 @@ import tempfile
 from typing import Optional, Tuple
 
 from fastapi import FastAPI, HTTPException, UploadFile, File, Query
+from fastapi.middleware.cors import CORSMiddleware
 
 from app.classifier import EmailClassifier
 from app.file_processor import FileProcessor
@@ -26,6 +27,15 @@ UVICORN_HOST = "0.0.0.0"
 UVICORN_PORT = 8000
 
 app = FastAPI()
+
+# Configure CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000", "http://localhost:5173"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # Initialize components
 classifier = EmailClassifier()
@@ -64,6 +74,7 @@ def _process_email_analysis(email_content: str) -> EmailAnalysis:
         
         return EmailAnalysis(
             content=email_content[:CONTENT_PREVIEW_LENGTH],
+            full_content=email_content,
             category=category,
             confidence=confidence,
             suggested_response=suggested_response,

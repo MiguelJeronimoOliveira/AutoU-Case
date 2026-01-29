@@ -15,6 +15,7 @@ class EmailCategory(str, Enum):
 class EmailAnalysis(BaseModel):
     
     content: str = Field(..., description="Email content preview")
+    full_content: Optional[str] = Field(None, description="Full email content")
     category: EmailCategory = Field(..., description="Classification category")
     confidence: float = Field(
         ...,
