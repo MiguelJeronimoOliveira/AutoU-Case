@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 # Constants
 GEMINI_MODEL_NAME = "gemini-2.5-flash"
-EMAIL_PREVIEW_LENGTH = 2000
+EMAIL_PREVIEW_LENGTH = 20000
 MAX_RESPONSE_LENGTH = 1000
 GENERATION_TEMPERATURE = 0.7
 
