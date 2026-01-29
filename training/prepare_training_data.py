@@ -16,11 +16,15 @@ def load_email_examples(data_dir: str = "exemples") -> List[Dict[str, str]]:
 
     for file_path in data_dir_path.glob("email_*.txt"):
         # determine the label based on the file name
-        if file_path.stem.startswith("email_produtivo"):
+        file_name = file_path.stem.lower()
+        
+        # New pattern: email_[cliente]_[tipo]_produtivo_[pt/en].txt
+        if "_produtivo" in file_name:
             label = 1  # productive
-        elif file_path.stem.startswith("email_nao_produtivo"):
+        # New pattern: email_[cliente]_[tipo]_improdutivo_[pt/en].txt
+        elif "_improdutivo" in file_name:
             label = 0  # unproductive
-        elif "misto" in file_path.stem:
+        elif "misto" in file_name:
             label = 1
         else:
             # for other cases, try to infer from the content
