@@ -6,6 +6,7 @@ import tempfile
 from typing import Optional, Tuple
 
 from fastapi import FastAPI, HTTPException, UploadFile, File, Query
+from fastapi.middleware.cors import CORSMiddleware
 
 from app.classifier import EmailClassifier
 from app.file_processor import FileProcessor
@@ -26,6 +27,15 @@ UVICORN_HOST = "0.0.0.0"
 UVICORN_PORT = 8000
 
 app = FastAPI()
+
+# Configure CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000", "http://localhost:5173"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # Initialize components
 classifier = EmailClassifier()
@@ -64,6 +74,7 @@ def _process_email_analysis(email_content: str) -> EmailAnalysis:
         
         return EmailAnalysis(
             content=email_content[:CONTENT_PREVIEW_LENGTH],
+            full_content=email_content,
             category=category,
             confidence=confidence,
             suggested_response=suggested_response,
@@ -216,6 +227,29 @@ async def analyze_email(request: EmailRequest) -> EmailResponse:
         raise HTTPException(
             status_code=500,
             detail=f"Internal server error: {str(e)}"
+        )
+
+
+@app.delete("/rag/clear")
+async def clear_rag_history() -> dict:
+    if not rag_retriever:
+        raise HTTPException(
+            status_code=503,
+            detail="RAG Retriever não está disponível"
+        )
+    
+    try:
+        deleted_count = rag_retriever.clear_history()
+        return {
+            "success": True,
+            "message": f"Histórico limpo com sucesso. {deleted_count} documentos removidos.",
+            "deleted_count": deleted_count
+        }
+    except Exception as e:
+        logger.error(f"Erro ao limpar histórico RAG: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Erro ao limpar histórico: {str(e)}"
         )
 
 

@@ -91,17 +91,16 @@ class RAGRetriever:
             raise RuntimeError("Collection não inicializada")
         
         try:
-            # create document combining email and response for better search
             document_text = f"Email: {email_content}\nResposta: {response}"
             
-            # generate embedding
             embedding = self._generate_embedding(document_text)
             
-            # create unique id
             doc_id = str(uuid.uuid4())
             
+            email_preview = email_content[:50000] if len(email_content) > 50000 else email_content
+            
             doc_metadata = {
-                "email_content": email_content[:500],
+                "email_content": email_preview,
                 "response": response,
                 "category": category.value,
                 "created_at": datetime.now().isoformat(),
@@ -115,7 +114,13 @@ class RAGRetriever:
                 metadatas=[doc_metadata]
             )
             
-            logger.info(f"Documento adicionado à base de conhecimento: {doc_id}")
+            try:
+                current_count = self.collection.count()
+                logger.debug(f"Total de documentos na coleção após adicionar: {current_count}")
+            except Exception as e:
+                logger.warning(f"Erro ao verificar contagem após adicionar documento: {str(e)}")
+            
+            logger.info(f"Documento adicionado à base de conhecimento: {doc_id} (email: {len(email_content)} chars, resposta: {len(response)} chars)")
             return doc_id
             
         except Exception as e:
@@ -205,45 +210,25 @@ class RAGRetriever:
             return []
         
         try:
+            all_results = self.collection.get()
+            
+            if not all_results or not all_results.get("ids"):
+                return []
             
             all_documents = []
-            seen_ids = set()
             
-            query_terms = ["email", "resposta", "solicitação", "contato", "mensagem", "obrigado"]
-            
-            for term in query_terms:
-                try:
-                    results = self.collection.query(
-                        query_texts=[term],
-                        n_results=100
-                    )
-                    
-                    if results["ids"] and len(results["ids"][0]) > 0:
-                        for i, doc_id in enumerate(results["ids"][0]):
-                            if doc_id not in seen_ids:
-                                seen_ids.add(doc_id)
-                                metadata = results["metadatas"][0][i]
-                                
-                                # filter by category if specified
-                                if category and metadata.get("category") != category.value:
-                                    continue
-                                
-                                all_documents.append({
-                                    "id": doc_id,
-                                    "document": results["documents"][0][i],
-                                    "metadata": metadata,
-                                    "distance": results["distances"][0][i] if results["distances"] else None
-                                })
-                                
-                                if limit and len(all_documents) >= limit:
-                                    break
-                    
-                    if limit and len(all_documents) >= limit:
-                        break
-                        
-                except Exception as e:
-                    logger.debug(f"Erro ao buscar com termo '{term}': {str(e)}")
+            for i, doc_id in enumerate(all_results["ids"]):
+                metadata = all_results["metadatas"][i] if all_results.get("metadatas") else {}
+                
+                # filter by category if specified
+                if category and metadata.get("category") != category.value:
                     continue
+                
+                all_documents.append({
+                    "id": doc_id,
+                    "document": all_results["documents"][i] if all_results.get("documents") else "",
+                    "metadata": metadata
+                })
             
             try:
                 all_documents.sort(
@@ -275,4 +260,33 @@ class RAGRetriever:
         except Exception as e:
             logger.error(f"Erro ao obter estatísticas: {str(e)}")
             return {"count": 0, "status": "error", "error": str(e)}
+    
+    def clear_history(self) -> int:
+        if not self.collection:
+            raise RuntimeError("Collection não inicializada")
+        
+        try:
+            count = self.collection.count()
+            
+            if count == 0:
+                logger.info("Nenhum documento para remover")
+                return 0
+            
+            all_results = self.collection.get()
+            if all_results and all_results.get("ids"):
+                all_ids = all_results["ids"]
+                
+                self.collection.delete(ids=all_ids)
+                
+                new_count = self.collection.count()
+                logger.info(f"Histórico limpo: {count} documentos removidos. Restam {new_count} documentos.")
+                
+                return count
+            else:
+                logger.warning("Nenhum ID encontrado para remover")
+                return 0
+                
+        except Exception as e:
+            logger.error(f"Erro ao limpar histórico: {str(e)}")
+            raise
 
