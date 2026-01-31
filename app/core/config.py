@@ -52,6 +52,40 @@ class Settings(BaseSettings):
     log_level: str = "INFO"
     log_format: str = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
     
+    # Email Configuration
+    email_address: str = Field(
+        default="",
+        description="Email address for receiving and sending emails"
+    )
+    email_password: str = Field(
+        default="",
+        description="Email password or app password"
+    )
+    email_imap_server: str = Field(
+        default="imap.gmail.com",
+        description="IMAP server address"
+    )
+    email_imap_port: int = Field(
+        default=993,
+        description="IMAP server port"
+    )
+    email_smtp_server: str = Field(
+        default="smtp.gmail.com",
+        description="SMTP server address"
+    )
+    email_smtp_port: int = Field(
+        default=465,
+        description="SMTP server port"
+    )
+    email_use_ssl: bool = Field(
+        default=True,
+        description="Whether to use SSL for email connections"
+    )
+    email_check_interval: int = Field(
+        default=60,
+        description="Interval in seconds to check for new emails"
+    )
+    
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"
