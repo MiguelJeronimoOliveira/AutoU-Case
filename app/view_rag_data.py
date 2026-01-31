@@ -11,6 +11,12 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
+#format document for display
+#@param doc_id: document ID
+#@param document: document text
+#@param metadata: document metadata
+#@param distance: similarity distance
+#@return: formatted document dictionary
 def format_document(doc_id: str, document: str, metadata: Dict[str, Any], distance: float = None) -> Dict[str, Any]:
     similarity = 1.0 - distance if distance is not None else None
     
@@ -26,6 +32,10 @@ def format_document(doc_id: str, document: str, metadata: Dict[str, Any], distan
     }
 
 
+#view all documents from RAG database
+#@param limit: maximum number of documents to return
+#@param category: optional category filter
+#@return: list of formatted documents
 def view_all_documents(limit: int = None, category: str = None) -> List[Dict[str, Any]]:
     try:
         rag_retriever = RAGRetriever()
@@ -53,10 +63,18 @@ def view_all_documents(limit: int = None, category: str = None) -> List[Dict[str
         return []
 
 
+#view documents filtered by category
+#@param category: email category to filter by
+#@param limit: maximum number of documents to return
+#@return: list of formatted documents
 def view_documents_by_category(category: EmailCategory, limit: int = None) -> List[Dict[str, Any]]:
     return view_all_documents(limit=limit, category=category.value)
 
 
+#print documents in formatted table
+#@param documents: list of documents to print
+#@param show_full: whether to show full document content
+#@return: None
 def print_documents_table(documents: List[Dict[str, Any]], show_full: bool = False) -> None:
     if not documents:
         print("\n❌ Nenhum documento encontrado na base de conhecimento.")
@@ -86,6 +104,10 @@ def print_documents_table(documents: List[Dict[str, Any]], show_full: bool = Fal
     print(f"\n{'='*80}\n")
 
 
+#export documents to JSON file
+#@param documents: list of documents to export
+#@param output_file: output file path
+#@return: None
 def export_to_json(documents: List[Dict[str, Any]], output_file: str = "rag_data_export.json") -> None:
     try:
         export_data = []

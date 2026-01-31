@@ -14,7 +14,7 @@ export const analyzeFile = async (file: File): Promise<EmailResponse> => {
   const formData = new FormData();
   formData.append('file', file);
 
-  const response = await api.post<EmailResponse>('/analyze/upload', formData, {
+  const response = await api.post<EmailResponse>('/api/v1/analyze/upload', formData, {
     headers: {
       'Content-Type': 'multipart/form-data',
     },
@@ -37,12 +37,12 @@ export const getHistory = async (
     params.append('full', 'true');
   }
 
-  const response = await api.get<HistoryResponse>(`/rag/documents?${params.toString()}`);
+  const response = await api.get<HistoryResponse>(`/api/v1/rag/documents?${params.toString()}`);
   return response.data;
 };
 
 export const healthCheck = async () => {
-  const response = await api.get('/health');
+  const response = await api.get('/api/v1/health');
   return response.data;
 };
 
@@ -53,7 +53,7 @@ export interface ClearHistoryResponse {
 }
 
 export const clearHistory = async (): Promise<ClearHistoryResponse> => {
-  const response = await api.delete<ClearHistoryResponse>('/rag/clear');
+  const response = await api.delete<ClearHistoryResponse>('/api/v1/rag/clear');
   return response.data;
 };
 
