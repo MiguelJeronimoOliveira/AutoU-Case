@@ -7,6 +7,9 @@ from app.classifier import EmailClassifier
 from app.file_processor import FileProcessor
 from app.rag_retriever import RAGRetriever
 from app.response_generator import ResponseGenerator
+from app.services.email_processor import EmailProcessor
+from app.services.email_service import EmailService
+from app.services.email_storage import EmailStorage
 
 
 @lru_cache()
@@ -33,4 +36,24 @@ def get_rag_retriever() -> Optional[RAGRetriever]:
     if response_generator.use_rag and response_generator.rag_retriever:
         return response_generator.rag_retriever
     return None
+
+
+@lru_cache()
+def get_email_storage() -> EmailStorage:
+    """Get or create EmailStorage instance (singleton)."""
+    return EmailStorage()
+
+
+@lru_cache()
+def get_email_service() -> EmailService:
+    """Get or create EmailService instance (singleton)."""
+    return EmailService()
+
+
+def get_email_processor() -> EmailProcessor:
+    """Get EmailProcessor instance."""
+    classifier = get_classifier()
+    response_generator = get_response_generator()
+    email_storage = get_email_storage()
+    return EmailProcessor(classifier, response_generator, email_storage)
 
