@@ -204,3 +204,21 @@ export const clearAllEmails = async (): Promise<ClearAllEmailsResponse> => {
   return response.data;
 };
 
+// Auto-Reply Configuration API
+import type { AutoReplyConfig } from '../types';
+
+export const getAutoReplyConfig = async (): Promise<AutoReplyConfig> => {
+  const response = await api.get<AutoReplyConfig>('/api/v1/auto-reply/config');
+  return response.data;
+};
+
+export const updateAutoReplyConfig = async (
+  config: AutoReplyConfig
+): Promise<AutoReplyConfig> => {
+  const response = await api.put<AutoReplyConfig>(
+    '/api/v1/auto-reply/config',
+    config
+  );
+  return response.data;
+};
+

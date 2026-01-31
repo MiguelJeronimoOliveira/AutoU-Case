@@ -72,3 +72,9 @@ export interface SuggestionWithEmail {
   email: ReceivedEmail;
 }
 
+export interface AutoReplyConfig {
+  enabled: boolean;
+  only_productive: boolean;
+  min_confidence: number;
+}
+

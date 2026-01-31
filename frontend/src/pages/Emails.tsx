@@ -10,6 +10,7 @@ import {
   Trash2,
 } from 'lucide-react';
 import { EmailCard } from '../components/EmailCard';
+import { AutoReplyToggle } from '../components/AutoReplyToggle';
 import {
   getEmails,
   getSuggestions,
@@ -146,6 +147,7 @@ export const Emails = () => {
           </p>
         </div>
         <div className="flex items-center gap-3">
+          <AutoReplyToggle />
           {emailsData && emailsData.total > 0 && (
             <button
               onClick={handleClearAllEmails}
