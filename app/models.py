@@ -1,7 +1,8 @@
 """Pydantic models for email classification API."""
 
+from datetime import datetime
 from enum import Enum
-from typing import Optional
+from typing import List, Optional
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -64,4 +65,53 @@ class EmailResponse(BaseModel):
         None,
         description="Error message if analysis failed"
     )
+
+
+class ReceivedEmail(BaseModel):
+    """Model for received email."""
+    
+    id: str = Field(..., description="Unique email ID")
+    message_id: Optional[str] = Field(None, description="Email Message-ID header")
+    subject: str = Field(..., description="Email subject")
+    sender: str = Field(..., description="Email sender address")
+    recipient: str = Field(..., description="Email recipient address")
+    content: str = Field(..., description="Email body content")
+    received_at: datetime = Field(..., description="When email was received")
+    category: Optional[EmailCategory] = Field(None, description="Email category")
+    confidence: Optional[float] = Field(None, description="Classification confidence")
+    has_suggestion: bool = Field(False, description="Whether suggestion was generated")
+    suggestion_id: Optional[str] = Field(None, description="ID of generated suggestion")
+
+
+class EmailSuggestion(BaseModel):
+    """Model for email response suggestion."""
+    
+    id: str = Field(..., description="Unique suggestion ID")
+    email_id: str = Field(..., description="ID of the received email")
+    suggested_response: str = Field(..., description="Generated response text")
+    status: str = Field(default="pending", description="Status: pending, approved, rejected, sent")
+    created_at: datetime = Field(..., description="When suggestion was created")
+    approved_at: Optional[datetime] = Field(None, description="When suggestion was approved")
+    sent_at: Optional[datetime] = Field(None, description="When email was sent")
+
+
+class EmailListResponse(BaseModel):
+    """Response model for listing emails."""
+    
+    emails: List[ReceivedEmail] = Field(..., description="List of received emails")
+    total: int = Field(..., description="Total number of emails")
+
+
+class SuggestionListResponse(BaseModel):
+    """Response model for listing suggestions."""
+    
+    suggestions: List[EmailSuggestion] = Field(..., description="List of suggestions")
+    total: int = Field(..., description="Total number of suggestions")
+
+
+class ApproveSuggestionRequest(BaseModel):
+    """Request model for approving a suggestion."""
+    
+    suggestion_id: str = Field(..., description="ID of suggestion to approve")
+    send_email: bool = Field(default=True, description="Whether to send email immediately after approval")
 
