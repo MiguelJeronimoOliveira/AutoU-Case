@@ -115,3 +115,15 @@ class ApproveSuggestionRequest(BaseModel):
     suggestion_id: str = Field(..., description="ID of suggestion to approve")
     send_email: bool = Field(default=True, description="Whether to send email immediately after approval")
 
+
+class AutoReplyConfig(BaseModel):
+    """Model for auto-reply configuration."""
+    
+    enabled: bool = Field(..., description="Whether auto-reply is enabled")
+    only_productive: bool = Field(default=True, description="Only auto-reply to productive emails")
+    min_confidence: float = Field(
+        default=0.7,
+        ge=0.0,
+        le=1.0,
+        description="Minimum confidence score required for auto-reply"
+    )

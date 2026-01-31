@@ -85,6 +85,20 @@ class Settings(BaseSettings):
         default=60,
         description="Interval in seconds to check for new emails"
     )
+    email_auto_reply_enabled: bool = Field(
+        default=False,
+        description="Enable automatic email replies with suggestions"
+    )
+    email_auto_reply_only_productive: bool = Field(
+        default=True,
+        description="Only auto-reply to productive emails (if False, replies to all)"
+    )
+    email_auto_reply_min_confidence: float = Field(
+        default=0.7,
+        ge=0.0,
+        le=1.0,
+        description="Minimum confidence score required for auto-reply"
+    )
     
     class Config:
         env_file = ".env"

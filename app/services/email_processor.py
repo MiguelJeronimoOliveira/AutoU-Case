@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, Optional
 from uuid import uuid4
 
 from app.classifier import EmailClassifier
+from app.core.config import settings
 from app.models import EmailCategory, EmailSuggestion, ReceivedEmail
 from app.response_generator import ResponseGenerator
 from app.services.email_storage import EmailStorage
@@ -120,6 +121,10 @@ class EmailProcessor:
             
             logger.info(f"Email {received_email.id} processado com sucesso. Sugestão {suggestion.id} criada.")
             
+            # Auto-reply if enabled
+            if settings.email_auto_reply_enabled:
+                self._try_auto_reply(received_email, suggestion, category, confidence)
+            
             return received_email
             
         except Exception as e:
@@ -232,4 +237,85 @@ class EmailProcessor:
         except Exception as e:
             logger.error(f"Erro ao rejeitar sugestão: {str(e)}")
             return False
+    
+    def _try_auto_reply(
+        self,
+        received_email: ReceivedEmail,
+        suggestion: EmailSuggestion,
+        category: EmailCategory,
+        confidence: float
+    ) -> None:
+        """
+        Try to automatically reply to email if conditions are met.
+        
+        Args:
+            received_email: The received email object
+            suggestion: The generated suggestion
+            category: Email category
+            confidence: Classification confidence score
+        """
+        try:
+            # Check if auto-reply should be sent
+            should_reply = False
+            
+            # Check confidence threshold
+            if confidence < settings.email_auto_reply_min_confidence:
+                logger.debug(
+                    f"Email {received_email.id} não atende ao threshold de confiança "
+                    f"({confidence:.2f} < {settings.email_auto_reply_min_confidence})"
+                )
+                return
+            
+            # Check category filter
+            if settings.email_auto_reply_only_productive:
+                if category == EmailCategory.PRODUCTIVE:
+                    should_reply = True
+                else:
+                    logger.debug(
+                        f"Email {received_email.id} é unproductive, resposta automática desabilitada para este tipo"
+                    )
+                    return
+            else:
+                # Reply to all emails if filter is disabled
+                should_reply = True
+            
+            if not should_reply:
+                return
+            
+            # Get email service
+            from app.api.deps import get_email_service
+            email_service = get_email_service()
+            
+            # Send email automatically
+            subject = f"Re: {received_email.subject}"
+            success = email_service.send_email(
+                to_address=received_email.sender,
+                subject=subject,
+                body=suggestion.suggested_response,
+                reply_to_message_id=received_email.message_id
+            )
+            
+            if success:
+                # Update suggestion status
+                suggestion.status = "sent"
+                suggestion.approved_at = datetime.now()
+                suggestion.sent_at = datetime.now()
+                self.storage.save_suggestion(suggestion)
+                
+                # Mark email as read
+                email_service.mark_email_as_read(received_email.id)
+                
+                logger.info(
+                    f"Resposta automática enviada para {received_email.sender} "
+                    f"(email {received_email.id}, sugestão {suggestion.id})"
+                )
+            else:
+                logger.error(
+                    f"Falha ao enviar resposta automática para {received_email.sender} "
+                    f"(email {received_email.id})"
+                )
+                
+        except Exception as e:
+            logger.error(f"Erro ao tentar resposta automática para email {received_email.id}: {str(e)}")
+            # Don't raise - auto-reply failure shouldn't break email processing
 

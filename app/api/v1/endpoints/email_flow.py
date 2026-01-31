@@ -4,8 +4,10 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from typing import Optional
 
 from app.api.deps import get_email_processor, get_email_service, get_email_storage
+from app.core.config import settings
 from app.models import (
     ApproveSuggestionRequest,
+    AutoReplyConfig,
     EmailListResponse,
     ReceivedEmail,
     SuggestionListResponse
@@ -216,3 +218,32 @@ async def clear_all_emails(
             status_code=500,
             detail=f"Erro ao limpar emails: {str(e)}"
         )
+
+
+@router.get("/auto-reply/config", response_model=AutoReplyConfig, tags=["email"])
+async def get_auto_reply_config():
+    """Get current auto-reply configuration."""
+    return AutoReplyConfig(
+        enabled=settings.email_auto_reply_enabled,
+        only_productive=settings.email_auto_reply_only_productive,
+        min_confidence=settings.email_auto_reply_min_confidence
+    )
+
+
+@router.put("/auto-reply/config", response_model=AutoReplyConfig, tags=["email"])
+async def update_auto_reply_config(config: AutoReplyConfig):
+    """
+    Update auto-reply configuration.
+    
+    Note: This updates the settings object in memory. For persistent changes,
+    update the .env file or environment variables.
+    """
+    settings.email_auto_reply_enabled = config.enabled
+    settings.email_auto_reply_only_productive = config.only_productive
+    settings.email_auto_reply_min_confidence = config.min_confidence
+    
+    return AutoReplyConfig(
+        enabled=settings.email_auto_reply_enabled,
+        only_productive=settings.email_auto_reply_only_productive,
+        min_confidence=settings.email_auto_reply_min_confidence
+    )
