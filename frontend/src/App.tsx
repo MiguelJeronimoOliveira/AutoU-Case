@@ -4,6 +4,7 @@ import { Layout } from './components/Layout';
 import { Home } from './pages/Home';
 import { History } from './pages/History';
 import { Emails } from './pages/Emails';
+import { Settings } from './pages/Settings';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -24,6 +25,7 @@ function App() {
             <Route path="/" element={<Home />} />
             <Route path="/history" element={<History />} />
             <Route path="/emails" element={<Emails />} />
+            <Route path="/settings" element={<Settings />} />
           </Routes>
         </Layout>
       </BrowserRouter>
