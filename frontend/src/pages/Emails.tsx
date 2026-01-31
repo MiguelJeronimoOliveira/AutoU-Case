@@ -7,7 +7,6 @@ import {
   AlertCircle,
   CheckCircle2,
   Filter,
-  Trash2,
 } from 'lucide-react';
 import { EmailCard } from '../components/EmailCard';
 import { AutoReplyToggle } from '../components/AutoReplyToggle';
@@ -15,7 +14,6 @@ import {
   getEmails,
   getSuggestions,
   checkNewEmails,
-  clearAllEmails,
 } from '../services/api';
 import { useToast } from '../hooks/useToast';
 import type { EmailSuggestion } from '../types';
@@ -74,39 +72,8 @@ export const Emails = () => {
     },
   });
 
-  // Clear all emails mutation
-  const clearAllEmailsMutation = useMutation({
-    mutationFn: () => clearAllEmails(),
-    onSuccess: (data) => {
-      showToast(
-        `${data.deleted_count} email(s) deletado(s) com sucesso`,
-        'success'
-      );
-      queryClient.invalidateQueries({ queryKey: ['emails'] });
-      queryClient.invalidateQueries({ queryKey: ['suggestions'] });
-    },
-    onError: (error: any) => {
-      showToast(
-        error.response?.data?.detail || 'Erro ao deletar emails',
-        'error'
-      );
-    },
-  });
-
   const handleCheckNewEmails = () => {
     checkEmailsMutation.mutate(10);
-  };
-
-  const handleClearAllEmails = () => {
-    if (
-      !confirm(
-        'Tem certeza que deseja deletar TODOS os emails? Esta ação é irreversível e deletará todos os emails e sugestões associadas.'
-      )
-    ) {
-      return;
-    }
-
-    clearAllEmailsMutation.mutate();
   };
 
   const handleUpdate = () => {
@@ -148,25 +115,6 @@ export const Emails = () => {
         </div>
         <div className="flex items-center gap-3">
           <AutoReplyToggle />
-          {emailsData && emailsData.total > 0 && (
-            <button
-              onClick={handleClearAllEmails}
-              disabled={clearAllEmailsMutation.isPending}
-              className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {clearAllEmailsMutation.isPending ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  <span>Deletando...</span>
-                </>
-              ) : (
-                <>
-                  <Trash2 className="h-4 w-4" />
-                  <span>Deletar Todos</span>
-                </>
-              )}
-            </button>
-          )}
           <button
             onClick={handleCheckNewEmails}
             disabled={checkEmailsMutation.isPending}
