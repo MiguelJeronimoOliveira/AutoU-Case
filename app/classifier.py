@@ -13,8 +13,8 @@ logger = logging.getLogger(__name__)
 
 # Constants
 # try to use fine-tuned model if it exists, otherwise use the base model
-DEFAULT_MODEL_NAME = "distilbert-base-uncased"
-FINE_TUNED_MODEL_PATH = "models/email_classifier"
+DEFAULT_MODEL_NAME = "neuralmind/bert-base-portuguese-cased" 
+FINE_TUNED_MODEL_PATH = "models/email_classifier-pt-en/checkpoint-300"
 
 # verify if fine-tuned model exists
 if os.path.exists(FINE_TUNED_MODEL_PATH) and os.path.isdir(FINE_TUNED_MODEL_PATH):
