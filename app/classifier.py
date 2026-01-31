@@ -27,8 +27,15 @@ class EmailClassifier:
     #@return: None
     def _load_model(self) -> None:
         try:
-            logger.info(f"Carregando modelo de classificação: {self.model_name}")
+            is_hf_model = "/" in self.model_name and not os.path.exists(self.model_name)
+            
+            if is_hf_model:
+                logger.info(f"Carregando modelo do Hugging Face: {self.model_name}")
+            else:
+                logger.info(f"Carregando modelo local: {self.model_name}")
+            
             self.tokenizer = AutoTokenizer.from_pretrained(self.model_name)
+            logger.info("Tokenizer carregado com sucesso")
             
             try:
                 self.ml_model = AutoModelForSequenceClassification.from_pretrained(
@@ -37,8 +44,13 @@ class EmailClassifier:
                 device = "cuda" if torch.cuda.is_available() else "cpu"
                 self.ml_model.to(device)
                 self.ml_model.eval()
-                logger.info(f"Modelo fine-tuned carregado em {device}")
-            except Exception:
+                
+                model_source = "Hugging Face Hub" if is_hf_model else "local"
+                logger.info(f"✅ Modelo carregado com sucesso de {model_source} em {device}")
+            except Exception as e:
+                logger.warning(f"Erro ao carregar modelo completo: {str(e)}")
+                logger.info("Tentando usar pipeline como fallback...")
+                
                 device = 0 if torch.cuda.is_available() else -1
                 self.classifier = pipeline(
                     "text-classification",
@@ -46,12 +58,20 @@ class EmailClassifier:
                     tokenizer=self.tokenizer,
                     device=device
                 )
-                logger.info("Pipeline de classificação carregado")
+                logger.info("✅ Pipeline de classificação carregado com sucesso")
             
-            logger.info("Modelo de classificação carregado com sucesso")
+            logger.info("Modelo de classificação pronto para uso")
         except Exception as e:
-            error_msg = f"Erro ao carregar modelo de classificação: {str(e)}"
+            error_msg = f"Erro ao carregar modelo de classificação '{self.model_name}': {str(e)}"
             logger.error(error_msg)
+            
+            if "401" in str(e) or "Unauthorized" in str(e):
+                error_msg += "\n💡 Dica: Se o modelo for privado, configure o token do Hugging Face:"
+                error_msg += "\n   - Windows PowerShell: $env:HF_TOKEN='seu-token'"
+                error_msg += "\n   - Linux/Mac: export HF_TOKEN='seu-token'"
+            elif "404" in str(e) or "not found" in str(e).lower():
+                error_msg += f"\n💡 Verifique se o modelo '{self.model_name}' existe no Hugging Face Hub"
+            
             raise RuntimeError(error_msg)
     
     #classify the email using ML model

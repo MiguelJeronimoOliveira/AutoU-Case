@@ -33,8 +33,8 @@ class Settings(BaseSettings):
     gemini_model_name: str = "gemini-2.5-flash"
     
     # Model Configuration
-    model_path: str = ""
-    default_model_name: str = "distilbert-base-uncased"
+    model_path: str = "MiguelJeronimoOliveira/email-classifier"
+    default_model_name: str = "MiguelJeronimoOliveira/email-classifier"
     
     # RAG Configuration
     rag_enabled: bool = True
@@ -105,13 +105,17 @@ class Settings(BaseSettings):
         env_file_encoding = "utf-8"
         case_sensitive = False
         
-    #get the model name, checking if fine-tuned model exists
-    #@return: model name
+    #get the model name, checking if fine-tuned model exists locally or using Hugging Face model
+    #@return: model name (local path or Hugging Face model ID)
     def get_model_name(self) -> str:
         import os
+        if not self.model_path:
+            return self.default_model_name
+        
         if os.path.exists(self.model_path) and os.path.isdir(self.model_path):
             return self.model_path
-        return self.default_model_name
+        
+        return self.model_path
 
 
 # Global settings instance
