@@ -21,6 +21,11 @@ export const Home = () => {
     showToast(message, 'error');
   };
 
+  const handleFileSelect = () => {
+    // Limpa o resultado da análise anterior quando um novo arquivo é selecionado
+    setAnalysisResult(null);
+  };
+
   return (
     <div className="max-w-4xl mx-auto space-y-8">
       <div className="text-center space-y-2">
@@ -35,6 +40,7 @@ export const Home = () => {
 
       <FileUpload
         onAnalysisComplete={handleAnalysisComplete}
+        onFileSelect={handleFileSelect}
         onError={handleError}
       />
 

@@ -61,14 +61,6 @@ export const AnalysisResult = ({ analysis }: AnalysisResultProps) => {
         </div>
       </div>
 
-      {/* Reasoning */}
-      {analysis.reasoning && (
-        <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
-          <h4 className="font-medium text-gray-900 mb-2">Raciocínio</h4>
-          <p className="text-sm text-gray-700">{analysis.reasoning}</p>
-        </div>
-      )}
-
       {/* Preview Completo do Email - ANTES da Resposta */}
       <div className="p-6 bg-white rounded-lg border-2 border-gray-200 shadow-sm">
         <div className="flex items-center gap-3 mb-4">

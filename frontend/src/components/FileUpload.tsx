@@ -5,10 +5,11 @@ import type { EmailResponse } from '../types';
 
 interface FileUploadProps {
   onAnalysisComplete: (response: EmailResponse) => void;
+  onFileSelect?: () => void;
   onError?: (message: string) => void;
 }
 
-export const FileUpload = ({ onAnalysisComplete, onError }: FileUploadProps) => {
+export const FileUpload = ({ onAnalysisComplete, onFileSelect, onError }: FileUploadProps) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [dragActive, setDragActive] = useState(false);
@@ -26,6 +27,10 @@ export const FileUpload = ({ onAnalysisComplete, onError }: FileUploadProps) => 
       return;
     }
     setSelectedFile(file);
+    // Notifica que um novo arquivo foi selecionado para limpar resultado anterior
+    if (onFileSelect) {
+      onFileSelect();
+    }
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
