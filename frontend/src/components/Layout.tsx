@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { Home, History, Mail } from 'lucide-react';
+import { Home, History, Mail, Inbox } from 'lucide-react';
 import { clsx } from 'clsx';
 
 interface LayoutProps {
@@ -11,6 +11,7 @@ export const Layout = ({ children }: LayoutProps) => {
 
   const navItems = [
     { path: '/', label: 'Análise', icon: Home },
+    { path: '/emails', label: 'Emails', icon: Inbox },
     { path: '/history', label: 'Histórico', icon: History },
   ];
 
