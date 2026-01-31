@@ -13,31 +13,28 @@ import numpy as np
 from chromadb.config import Settings
 from sentence_transformers import SentenceTransformer
 
+from app.core.config import settings
 from app.models import EmailCategory
 
 logger = logging.getLogger(__name__)
 
-RAG_DB_PATH = "rag_knowledge_base"
-EMBEDDING_MODEL_NAME = "paraphrase-multilingual-MiniLM-L12-v2" 
-TOP_K_RESULTS = 3 
-MIN_SIMILARITY_SCORE = 0.5
-MAX_EMAIL_LENGTH_FOR_EMBEDDING = 50000
-
 
 class RAGRetriever:
     
-    def __init__(self, db_path: str = RAG_DB_PATH):
-        self.db_path = db_path
+    def __init__(self, db_path: Optional[str] = None):
+        self.db_path = db_path or settings.rag_knowledge_base_path
         self.embedding_model: Optional[SentenceTransformer] = None
         self.client: Optional[chromadb.ClientAPI] = None
         self.collection: Optional[chromadb.Collection] = None
         self._initialize()
     
+    #initialize the RAG retriever with embedding model and database
+    #@return: None
     def _initialize(self) -> None:
         try:
-
-            logger.info(f"Loading embedding model: {EMBEDDING_MODEL_NAME}")
-            self.embedding_model = SentenceTransformer(EMBEDDING_MODEL_NAME)
+            embedding_model_name = settings.rag_embedding_model_name
+            logger.info(f"Loading embedding model: {embedding_model_name}")
+            self.embedding_model = SentenceTransformer(embedding_model_name)
             logger.info("Embedding model loaded successfully")
             
             Path(self.db_path).mkdir(parents=True, exist_ok=True)
@@ -66,6 +63,9 @@ class RAGRetriever:
             logger.error(error_msg)
             raise RuntimeError(error_msg)
     
+    #preprocess text by normalizing line breaks and whitespace
+    #@param text: text to preprocess
+    #@return: preprocessed text
     def _preprocess_text(self, text: str) -> str:
         if not text:
             return ""
@@ -79,20 +79,19 @@ class RAGRetriever:
         
         return text
     
+    #normalize embedding using L2 normalization
+    #@param embedding: embedding vector to normalize
+    #@return: normalized embedding vector
     def _normalize_embedding(self, embedding: np.ndarray) -> np.ndarray:
-        """
-        Normalizes embedding using L2 normalization.
-        Improves cosine similarity search quality.
-        """
         norm = np.linalg.norm(embedding)
         if norm > 0:
             return embedding / norm
         return embedding
     
-    # generate embedding for the given text
-    #args: text: the text to generate embedding for
-    #normalize: if True, applies L2 normalization to the embedding
-    #return: a list of floats representing the embedding
+    #generate embedding for the given text
+    #@param text: text to generate embedding for
+    #@param normalize: if True, applies L2 normalization to the embedding
+    #@return: list of floats representing the embedding
     def _generate_embedding(self, text: str, normalize: bool = True) -> List[float]:
         if not self.embedding_model:
             raise RuntimeError("Embedding model not loaded")
@@ -104,12 +103,13 @@ class RAGRetriever:
         try:
             processed_text = self._preprocess_text(text)
             
-            if len(processed_text) > MAX_EMAIL_LENGTH_FOR_EMBEDDING:
+            max_length = settings.rag_max_email_length
+            if len(processed_text) > max_length:
                 logger.warning(
                     f"Text truncated from {len(processed_text)} to "
-                    f"{MAX_EMAIL_LENGTH_FOR_EMBEDDING} characters for embedding generation"
+                    f"{max_length} characters for embedding generation"
                 )
-                processed_text = processed_text[:MAX_EMAIL_LENGTH_FOR_EMBEDDING]
+                processed_text = processed_text[:max_length]
             
             embedding = self.embedding_model.encode(processed_text, convert_to_numpy=True)
             
@@ -121,6 +121,12 @@ class RAGRetriever:
             logger.error(f"Error generating embedding: {str(e)}")
             raise
     
+    #add knowledge entry to the RAG database
+    #@param email_content: content of the email
+    #@param response: generated response for the email
+    #@param category: category of the email
+    #@param metadata: optional additional metadata
+    #@return: document ID of the added entry
     def add_knowledge(
         self,
         email_content: str,
@@ -132,8 +138,6 @@ class RAGRetriever:
             raise RuntimeError("Collection not initialized")
         
         try:
-            # Use only email_content for embedding to ensure consistency with queries
-            # Response is stored only in metadata for reference
             embedding = self._generate_embedding(email_content, normalize=True)
             
             doc_id = str(uuid.uuid4())
@@ -169,23 +173,24 @@ class RAGRetriever:
             logger.error(f"Error adding knowledge: {str(e)}")
             raise
     
-    # retrieve relevant context from the database
-    #args: query: the query to retrieve relevant context
-    #category: the category of the query
-    #top_k: the number of top results to retrieve
-    #return: a list of relevant documents
+    #retrieve relevant context from the database using semantic search
+    #@param query: query text to search for
+    #@param category: optional category filter
+    #@param top_k: number of top results to retrieve
+    #@return: list of relevant documents with similarity scores
     def retrieve_relevant_context(
         self,
         query: str,
         category: Optional[EmailCategory] = None,
-        top_k: int = TOP_K_RESULTS
+        top_k: Optional[int] = None
     ) -> List[Dict[str, Any]]:
+        if top_k is None:
+            top_k = settings.rag_top_k_results
         if not self.collection:
             logger.warning("Collection not initialized, returning empty list")
             return []
         
         try:
-            # Use normalize=True to ensure consistency with stored embeddings
             query_embedding = self._generate_embedding(query, normalize=True)
             
             where_filter = {}
@@ -204,7 +209,7 @@ class RAGRetriever:
                     distance = results["distances"][0][i] if results["distances"] else 0.0
                     similarity = 1.0 - distance
                     
-                    if similarity >= MIN_SIMILARITY_SCORE:
+                    if similarity >= settings.rag_min_similarity_score:
                         relevant_docs.append({
                             "id": doc_id,
                             "document": results["documents"][0][i],
@@ -219,9 +224,9 @@ class RAGRetriever:
             logger.error(f"Error retrieving context: {str(e)}")
             return []
     
-    # format documents for prompt
-    #args: relevant_docs: a list of relevant documents
-    #return: a formatted string with the context
+    #format documents for inclusion in prompt
+    #@param relevant_docs: list of relevant documents
+    #@return: formatted string with context
     def format_context_for_prompt(self, relevant_docs: List[Dict[str, Any]]) -> str:
         if not relevant_docs:
             return ""
@@ -242,6 +247,10 @@ class RAGRetriever:
         
         return "\n".join(context_parts)
     
+    #get all documents from the collection with optional filtering
+    #@param limit: maximum number of documents to return
+    #@param category: optional category filter
+    #@return: list of documents with metadata
     def get_all_documents(
         self,
         limit: Optional[int] = None,
@@ -284,6 +293,8 @@ class RAGRetriever:
             logger.error(f"Error getting all documents: {str(e)}")
             return []
     
+    #get statistics about the collection
+    #@return: dictionary with collection statistics
     def get_collection_stats(self) -> Dict[str, Any]:
         if not self.collection:
             return {"count": 0, "status": "not_initialized"}
@@ -299,6 +310,8 @@ class RAGRetriever:
             logger.error(f"Error getting statistics: {str(e)}")
             return {"count": 0, "status": "error", "error": str(e)}
     
+    #clear all documents from the collection
+    #@return: number of documents deleted
     def clear_history(self) -> int:
         if not self.collection:
             raise RuntimeError("Collection not initialized")

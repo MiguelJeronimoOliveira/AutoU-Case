@@ -6,7 +6,7 @@ import os
 import sys
 from pathlib import Path
 
-# Adicionar o diretório raiz ao path para permitir imports
+# add root directory to path for imports
 root_dir = Path(__file__).parent.parent
 if str(root_dir) not in sys.path:
     sys.path.insert(0, str(root_dir))
@@ -18,8 +18,10 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
+#load training data from JSON file for RAG initialization
+#@param data_file: path to training data JSON file
+#@return: list of training examples
 def load_training_data_for_rag(data_file: str = "training_data.json") -> list:
-    """Carrega dados de treinamento para popular a base RAG inicial."""
     if not os.path.exists(data_file):
         logger.warning(f"Arquivo de dados não encontrado: {data_file}")
         return []
@@ -35,11 +37,11 @@ def load_training_data_for_rag(data_file: str = "training_data.json") -> list:
         return []
 
 
+#create initial response based on template for training emails
+#@param email_data: email data dictionary
+#@param category: category of the email
+#@return: template response string
 def create_initial_responses(email_data: dict, category: EmailCategory) -> str:
-    """
-    Cria uma resposta inicial baseada no template para emails de treinamento.
-    Isso ajuda a popular a base RAG com exemplos iniciais.
-    """
     if category == EmailCategory.PRODUCTIVE:
         return (
             "Obrigado por entrar em contato conosco. Recebemos sua solicitação "
@@ -53,22 +55,18 @@ def create_initial_responses(email_data: dict, category: EmailCategory) -> str:
         )
 
 
+#initialize RAG knowledge base with training data
+#@param training_data_file: path to training data JSON file
+#@param max_examples: maximum number of examples to add
+#@return: None
 def initialize_rag_knowledge_base(
     training_data_file: str = "training_data.json",
     max_examples: int = 100
 ) -> None:
-    """
-    Inicializa a base de conhecimento RAG com dados de treinamento.
-    
-    Args:
-        training_data_file: Caminho para o arquivo de dados de treinamento
-        max_examples: Número máximo de exemplos para adicionar (para não sobrecarregar)
-    """
     logger.info("=" * 60)
     logger.info("Inicializando base de conhecimento RAG")
     logger.info("=" * 60)
     
-    # Inicializar RAG Retriever
     try:
         rag_retriever = RAGRetriever()
         stats = rag_retriever.get_collection_stats()
@@ -77,13 +75,10 @@ def initialize_rag_knowledge_base(
         logger.error(f"Erro ao inicializar RAG Retriever: {str(e)}")
         return
     
-    # Verificar se já há dados
     if stats.get("count", 0) > 0:
         logger.info(f"Base de conhecimento já contém {stats['count']} documentos")
         logger.info("Continuando para adicionar mais exemplos do arquivo de treinamento...")
-        # Nota: Em produção, você pode querer adicionar uma flag --force para sobrescrever
     
-    # Carregar dados de treinamento
     training_data = load_training_data_for_rag(training_data_file)
     
     if not training_data:
@@ -91,7 +86,6 @@ def initialize_rag_knowledge_base(
         logger.info("A base será populada automaticamente conforme respostas forem geradas.")
         return
     
-    # Adicionar exemplos à base
     added_count = 0
     skipped_count = 0
     
@@ -104,13 +98,10 @@ def initialize_rag_knowledge_base(
                 skipped_count += 1
                 continue
             
-            # Converter label para categoria
             category = EmailCategory.PRODUCTIVE if label == 1 else EmailCategory.UNPRODUCTIVE
             
-            # Criar resposta inicial
             response = create_initial_responses(example, category)
             
-            # Adicionar à base de conhecimento
             rag_retriever.add_knowledge(
                 email_content=text,
                 response=response,
@@ -131,7 +122,6 @@ def initialize_rag_knowledge_base(
             skipped_count += 1
             continue
     
-    # Estatísticas finais
     final_stats = rag_retriever.get_collection_stats()
     logger.info("\n" + "=" * 60)
     logger.info("Inicialização concluída!")

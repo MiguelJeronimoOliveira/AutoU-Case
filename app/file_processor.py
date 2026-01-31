@@ -6,19 +6,21 @@ from typing import Optional
 
 from pypdf import PdfReader
 
+from app.core.config import settings
+from app.core.constants import DEFAULT_ENCODING
+
 logger = logging.getLogger(__name__)
 
-# Constants
 TEXT_FILE_EXTENSION = ".txt"
 PDF_FILE_EXTENSION = ".pdf"
-SUPPORTED_EXTENSIONS = {TEXT_FILE_EXTENSION, PDF_FILE_EXTENSION}
-DEFAULT_ENCODING = "utf-8"
+SUPPORTED_EXTENSIONS = set(settings.supported_file_extensions)
 
 
 class FileProcessor:
-    
-    @staticmethod
-    def read_text_file(file_path: str, encoding: str = DEFAULT_ENCODING) -> str:
+
+    def read_text_file(self, file_path: str, encoding: str = None) -> str:
+        if encoding is None:
+            encoding = settings.default_encoding
         if not os.path.exists(file_path):
             raise FileNotFoundError(f"Text file not found: {file_path}")
         
@@ -41,8 +43,7 @@ class FileProcessor:
             logger.error(error_msg)
             raise ValueError(error_msg)
     
-    @staticmethod
-    def read_pdf_file(file_path: str) -> str:
+    def read_pdf_file(self, file_path: str) -> str:
         if not os.path.exists(file_path):
             raise FileNotFoundError(f"PDF file not found: {file_path}")
         
@@ -72,19 +73,17 @@ class FileProcessor:
             logger.error(error_msg)
             raise ValueError(error_msg)
     
-    @staticmethod
-    def _get_file_extension(file_path: str) -> str:
+    def _get_file_extension(self, file_path: str) -> str:
         return os.path.splitext(file_path)[1].lower()
     
-    @staticmethod
-    def process_file(file_path: str) -> str:
+    def process_file(self, file_path: str) -> str:
         if not file_path:
             raise ValueError("File path cannot be empty")
         
         if not os.path.exists(file_path):
             raise FileNotFoundError(f"File not found: {file_path}")
         
-        file_extension = FileProcessor._get_file_extension(file_path)
+        file_extension = self._get_file_extension(file_path)
         
         if file_extension not in SUPPORTED_EXTENSIONS:
             raise ValueError(
@@ -95,9 +94,9 @@ class FileProcessor:
         logger.info(f"Processing file: {file_path} (type: {file_extension})")
         
         if file_extension == TEXT_FILE_EXTENSION:
-            return FileProcessor.read_text_file(file_path)
+            return self.read_text_file(file_path)
         elif file_extension == PDF_FILE_EXTENSION:
-            return FileProcessor.read_pdf_file(file_path)
+            return self.read_pdf_file(file_path)
         else:
             raise ValueError(
                 f"Unsupported file type: {file_extension}. "
