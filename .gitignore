@@ -33,12 +33,6 @@ ENV/
 *.swo
 *~
 
-# Models (can be large)
-models/
-*.bin
-*.pt
-*.pth
-
 # Environment variables
 .env
 .env.local

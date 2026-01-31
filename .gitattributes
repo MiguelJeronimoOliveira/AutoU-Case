@@ -1,0 +1,10 @@
+# Git LFS - Modelos de Machine Learning
+models/**/*.safetensors filter=lfs diff=lfs merge=lfs -text
+models/**/*.pt filter=lfs diff=lfs merge=lfs -text
+models/**/*.bin filter=lfs diff=lfs merge=lfs -text
+models/**/*.pth filter=lfs diff=lfs merge=lfs -text
+
+# Arquivos de configuração dos modelos (pequenos, podem ficar no Git normal)
+models/**/*.json text
+models/**/*.txt text
+
