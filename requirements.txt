@@ -1,6 +1,7 @@
 fastapi>=0.115.0
 uvicorn[standard]>=0.32.0
 pydantic>=2.9.0
+pydantic-settings>=2.1.0
 python-multipart>=0.0.12
 transformers>=4.46.0
 torch>=2.6.0
@@ -12,3 +13,5 @@ scikit-learn>=1.5.0
 accelerate>=0.30.0
 chromadb>=0.4.0
 sentence-transformers>=2.2.0
+pytest>=7.4.0
+httpx>=0.25.0
