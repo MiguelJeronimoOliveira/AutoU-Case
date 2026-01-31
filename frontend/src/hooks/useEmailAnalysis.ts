@@ -1,6 +1,5 @@
 import { useMutation } from '@tanstack/react-query';
 import { analyzeFile } from '../services/api';
-import type { EmailResponse } from '../types';
 
 export const useEmailAnalysis = () => {
   return useMutation({

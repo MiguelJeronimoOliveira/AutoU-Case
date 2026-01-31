@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Bot, Loader2, Settings } from 'lucide-react';
+import { Bot, Loader2 } from 'lucide-react';
 import { getAutoReplyConfig, updateAutoReplyConfig } from '../services/api';
 import { useToast } from '../hooks/useToast';
 
