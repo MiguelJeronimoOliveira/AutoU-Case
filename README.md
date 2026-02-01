@@ -31,9 +31,6 @@ A comprehensive email management system that automatically classifies emails as 
 - [Development](#development)
 - [Training](#training)
 - [Testing](#testing)
-- [Deployment](#deployment)
-- [Contributing](#contributing)
-- [License](#license)
 
 ## 🔧 Prerequisites
 
